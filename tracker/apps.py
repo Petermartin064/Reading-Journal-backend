@@ -5,4 +5,4 @@ class TrackerConfig(AppConfig):
     name = 'tracker'
 
     def ready(self):
-        import tracker.signals
+        pass

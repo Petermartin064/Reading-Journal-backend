@@ -99,7 +99,15 @@ class CustomTokenRefreshView(TokenRefreshView):
         if refresh_token:
             request.data['refresh'] = refresh_token
             
-        response = super().post(request, *args, **kwargs)
+        try:
+            response = super().post(request, *args, **kwargs)
+        except Exception:
+            # Handle cases where the user in the token doesn't exist in the current DB
+            return Response({
+                "status": "error",
+                "message": "Invalid session or user not found. Please log in again.",
+                "data": {}
+            }, status=status.HTTP_401_UNAUTHORIZED)
         
         if response.status_code == 200:
             access_token = response.data.get('access')
