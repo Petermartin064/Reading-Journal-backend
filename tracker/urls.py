@@ -11,6 +11,9 @@ from .views import (
     FullScheduleView,
     ScheduleDetailView,
     BookViewSet,
+    PauseSessionView,
+    ResumeSessionView,
+    HeartbeatView,
 )
 
 router = DefaultRouter()
@@ -25,6 +28,9 @@ urlpatterns = [
     path('sessions/start/', StartSessionView.as_view(), name='session-start'),
     path('sessions/end/', EndSessionView.as_view(), name='session-end'),
     path('sessions/active/', ActiveSessionView.as_view(), name='session-active'),
+    path('sessions/pause/', PauseSessionView.as_view(), name='session-pause'),
+    path('sessions/resume/', ResumeSessionView.as_view(), name='session-resume'),
+    path('sessions/heartbeat/', HeartbeatView.as_view(), name='session-heartbeat'),
     path('sessions/history/', SessionHistoryView.as_view(), name='session-history'),
     path('analytics/weekly/', WeeklyAnalyticsView.as_view(), name='weekly-analytics'),
 ]

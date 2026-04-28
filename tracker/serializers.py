@@ -30,5 +30,10 @@ class ReadingSessionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ReadingSession
-        fields = ['id', 'session_type', 'schedule', 'book', 'book_title', 'book_author', 'started_at', 'ended_at', 'duration_minutes', 'is_active', 'start_page', 'end_page', 'notes']
+        fields = [
+            'id', 'session_type', 'schedule', 'book', 'book_title', 'book_author', 
+            'started_at', 'ended_at', 'duration_minutes', 'is_active', 
+            'start_page', 'end_page', 'is_paused', 'last_paused_at', 'total_paused_seconds', 
+            'last_heartbeat_at', 'notes'
+        ]
         read_only_fields = ['started_at', 'ended_at', 'duration_minutes', 'is_active']

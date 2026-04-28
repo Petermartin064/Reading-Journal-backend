@@ -65,6 +65,10 @@ class ReadingSession(models.Model):
     book = models.ForeignKey(Book, on_delete=models.SET_NULL, null=True, blank=True, related_name='sessions')
     start_page = models.IntegerField(null=True, blank=True)
     end_page = models.IntegerField(null=True, blank=True)
+    is_paused = models.BooleanField(default=False)
+    last_paused_at = models.DateTimeField(null=True, blank=True)
+    total_paused_seconds = models.IntegerField(default=0)
+    last_heartbeat_at = models.DateTimeField(null=True, blank=True)
     notes = models.TextField(blank=True, default='')
 
     class Meta:
@@ -75,10 +79,19 @@ class ReadingSession(models.Model):
 
     @property
     def duration_minutes(self):
-        if self.ended_at:
-            delta = self.ended_at - self.started_at
-            return round(delta.total_seconds() / 60, 1)
-        return None
+        if not self.started_at:
+            return 0
+        
+        end_time = self.ended_at or timezone.now()
+        total_seconds = (end_time - self.started_at).total_seconds()
+        
+        effective_paused_seconds = self.total_paused_seconds
+        if self.is_paused and self.last_paused_at:
+            # If currently paused, add the time from last_paused_at to now
+            effective_paused_seconds += (end_time - self.last_paused_at).total_seconds()
+            
+        active_seconds = max(0, total_seconds - effective_paused_seconds)
+        return round(active_seconds / 60, 1)
 
     @property
     def is_active(self):

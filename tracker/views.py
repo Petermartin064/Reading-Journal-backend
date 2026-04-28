@@ -74,12 +74,14 @@ class StartSessionView(APIView):
             except Book.DoesNotExist:
                 pass
 
+        now = timezone.now()
         session = ReadingSession.objects.create(
             user=request.user,
             session_type=session_type,
             schedule=schedule,
             book=book,
-            start_page=start_page
+            start_page=start_page,
+            last_heartbeat_at=now
         )
 
         serializer = ReadingSessionSerializer(session)
@@ -97,7 +99,12 @@ class EndSessionView(APIView):
                 "message": "No active session found."
             }, status=status.HTTP_404_NOT_FOUND)
 
-        active.ended_at = timezone.now()
+        custom_end_time = request.data.get('end_time')
+        if custom_end_time:
+            active.ended_at = custom_end_time
+        else:
+            active.ended_at = timezone.now()
+            
         active.notes = request.data.get('notes', '')
         end_page = request.data.get('end_page')
         
@@ -126,6 +133,63 @@ class ActiveSessionView(APIView):
             serializer = ReadingSessionSerializer(active)
             return Response({"status": "success", "data": serializer.data})
         return Response({"status": "success", "data": None})
+
+
+class PauseSessionView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        active = ReadingSession.objects.filter(user=request.user, ended_at__isnull=True).first()
+        if not active:
+            return Response({"status": "error", "message": "No active session."}, status=status.HTTP_404_NOT_FOUND)
+        
+        if active.is_paused:
+            return Response({"status": "error", "message": "Session already paused."}, status=status.HTTP_400_BAD_REQUEST)
+
+        now = timezone.now()
+        active.is_paused = True
+        active.last_paused_at = now
+        active.last_heartbeat_at = now
+        active.save()
+
+        serializer = ReadingSessionSerializer(active)
+        return Response({"status": "success", "data": serializer.data})
+
+
+class ResumeSessionView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        active = ReadingSession.objects.filter(user=request.user, ended_at__isnull=True).first()
+        if not active:
+            return Response({"status": "error", "message": "No active session."}, status=status.HTTP_404_NOT_FOUND)
+        
+        if not active.is_paused:
+            return Response({"status": "error", "message": "Session is not paused."}, status=status.HTTP_400_BAD_REQUEST)
+
+        now = timezone.now()
+        paused_duration = (now - active.last_paused_at).total_seconds()
+        active.total_paused_seconds += int(paused_duration)
+        active.is_paused = False
+        active.last_paused_at = None
+        active.last_heartbeat_at = now
+        active.save()
+
+        serializer = ReadingSessionSerializer(active)
+        return Response({"status": "success", "data": serializer.data})
+
+
+class HeartbeatView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        active = ReadingSession.objects.filter(user=request.user, ended_at__isnull=True).first()
+        if not active:
+            return Response({"status": "error", "message": "No active session."}, status=status.HTTP_404_NOT_FOUND)
+        
+        active.last_heartbeat_at = timezone.now()
+        active.save()
+        return Response({"status": "success"})
 
 
 class DashboardSummaryView(APIView):
